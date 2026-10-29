@@ -72,17 +72,6 @@ untouched as the key photo. Use the **Zoom** slider to set how much it moves.
 
 ## Getting it onto your iPhone
 
-A Live Photo is **two files that belong together**. The iPhone only treats them as a
-Live Photo if they arrive together, through a route that understands Live Photos.
-
-| Route | Result |
-|---|---|
-| **Mac → Photos app**: drag both files in at once, or click **Add to Photos** | ✅ Works. With iCloud Photos on, it syncs to your iPhone. |
-| **Mac → AirDrop** the imported Live Photo from Photos to your iPhone | ✅ Works |
-| **Website version on the iPhone** → **Share / Save…** → *Save 2 Items* | 🧪 Experimental, please report back |
-| Uploading on **icloud.com** | ❌ Arrives as a separate photo and video |
-| **iCloud for Windows** upload folder | ❌ Arrives as a separate photo and video |
-
 > **It shows LIVE but doesn't move?** That's normal for the first few minutes. The badge
 > arrives before the video part has finished downloading to the phone. Until it has,
 > pressing does nothing and Live / Loop / Bounce are greyed out. Wait a little and try
@@ -256,8 +245,8 @@ The video part hasn't downloaded to the phone yet. Wait a few minutes.
 
 **It arrived as a separate photo and video.**
 The two files took a route that doesn't know about Live Photos, such as icloud.com or the
-iCloud for Windows folder. Use one of the ✅ routes in
-[Getting it onto your iPhone](#getting-it-onto-your-iphone). Delete the stray copies.
+iCloud for Windows folder. Import both files together into the Photos app on a Mac
+instead, and delete the stray copies.
 
 **macOS: the window never appears, or the launcher says it needs Tk 8.6.**
 The `python3` that comes with macOS (`/usr/bin/python3`) ships Tk 8.5, which can't open
