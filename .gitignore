@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+
+# your own conversions
+output/
+*_live.JPG
+*_live.MOV
+*_live[0-9]*.JPG
+*_live[0-9]*.MOV

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Photo Maker</title>
+<meta name="description" content="Turn a video into an iPhone Live Photo in your browser. Nothing is uploaded.">
+<style>
+  :root {
+    --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --border: #d2d2d7;
+    --accent: #0a84ff; --accent-hover: #0071e3; --good: #1a7f37; --good-bg: #dcf5e3;
+    --warn: #8a5a00; --warn-bg: #fff3cd; --trough: #e5e5ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000; --card: #1c1c1e; --text: #f5f5f7; --muted: #98989d; --border: #38383a;
+      --good: #4ade80; --good-bg: #12351f; --warn: #fbbf24; --warn-bg: #3a2c05; --trough: #3a3a3c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 4px 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  #drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    min-height: 300px; padding: 24px; text-align: center; cursor: pointer;
+    border: 2px dashed var(--border); border-radius: 16px; background: var(--card); transition: border-color .15s, background .15s;
+  }
+  #drop:hover, #drop.over { border-color: var(--accent); }
+  #drop strong { font-size: 17px; }
+  #drop small { color: var(--muted); }
+  .rings { width: 52px; height: 52px; margin-bottom: 6px; }
+  #stage { position: relative; background: #000; display: none; }
+  #stage video { display: block; width: 100%; max-height: 60vh; object-fit: contain; }
+  .badge {
+    position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,.92); color: #1d1d1f; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    padding: 3px 9px 3px 6px; border-radius: 7px;
+  }
+  .badge svg { width: 13px; height: 13px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  #info { margin: 12px 2px 0; color: var(--muted); font-size: 13px; }
+  .chip { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+  .chip.good { color: var(--good); background: var(--good-bg); }
+  .chip.warn { color: var(--warn); background: var(--warn-bg); }
+  #editor { display: none; margin-top: 14px; }
+  label.key { font-weight: 600; }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 8px 0 2px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0; }
+  button, .btn {
+    font: inherit; font-weight: 600; border-radius: 12px; border: 1px solid var(--border); background: var(--card);
+    color: var(--text); padding: 9px 16px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover, .btn:hover { border-color: var(--muted); }
+  button.primary { width: 100%; justify-content: center; margin-top: 16px; padding: 13px; font-size: 16px;
+    background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button:disabled { opacity: .55; cursor: default; }
+  #result { display: none; margin-top: 16px; padding: 16px; }
+  #result h2 { font-size: 16px; color: var(--good); margin: 0 0 4px; }
+  #result .files { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  #thumb { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+  #error { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 12px; color: var(--warn); background: var(--warn-bg); }
+  details { margin-top: 28px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details ul { padding-left: 20px; margin: 8px 0; }
+  details li { margin: 4px 0; }
+  .ok { color: var(--good); font-weight: 700; } .no { color: var(--warn); font-weight: 700; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center; }
+  footer a { color: inherit; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Live Photo Maker</h1>
+  <p class="sub">Turn a video into an iPhone Live Photo, without losing quality. Everything happens in your browser: nothing is uploaded.</p>
+
+  <label id="drop" for="file">
+    <svg class="rings" viewBox="0 0 52 52" fill="none" stroke="#0a84ff" stroke-width="2.5" aria-hidden="true">
+      <circle cx="26" cy="26" r="23" stroke-dasharray="2.5 4"/><circle cx="26" cy="26" r="14"/><circle cx="26" cy="26" r="6" fill="#0a84ff"/>
+    </svg>
+    <strong>Drop a video here, or click to choose one</strong>
+    <small>MP4 or MOV with H.264 or HEVC video · a ~3-second clip works best</small>
+  </label>
+  <input id="file" type="file" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v">
+
+  <div id="stage" class="card">
+    <video id="video" muted playsinline preload="auto"></video>
+    <div class="badge"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="6" stroke-dasharray="1.2 1.6"/><circle cx="7" cy="7" r="3.4"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/></svg>LIVE</div>
+  </div>
+  <div class="row" id="info"></div>
+
+  <div id="editor">
+    <div class="row"><label class="key" for="still">Key photo</label><span id="stillLabel"></span></div>
+    <input id="still" type="range" min="0" max="1" step="0.001" value="0.5">
+    <p class="hint">Drag to choose the frame Photos shows as the still. The video itself is copied bit-for-bit.</p>
+    <button id="make" class="primary">Make Live Photo</button>
+    <button id="another" style="margin-top:10px">Choose another video</button>
+  </div>
+
+  <div id="error"></div>
+
+  <div id="result" class="card">
+    <div class="row" style="align-items:flex-start; justify-content:flex-start">
+      <img id="thumb" alt="Key photo">
+      <div style="flex:1; min-width: 200px">
+        <h2>✓ Live Photo ready</h2>
+        <p class="files" id="names"></p>
+        <div class="buttons">
+          <button id="both">Download both files</button>
+          <button id="share" style="display:none">Share / Save…</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <details>
+    <summary>How do I get it onto my iPhone?</summary>
+    <p>Both files have to arrive <b>together</b>, through a route that understands Live Photos:</p>
+    <ul>
+      <li><span class="ok">Works</span> On a Mac: drag both files into the Photos app at the same time. With iCloud Photos on, it syncs to your iPhone. You can also AirDrop it from Photos.</li>
+      <li><span class="no">Doesn't work</span> Uploading on icloud.com, or the iCloud for Windows upload folder: they split it into a separate photo and video.</li>
+      <li><b>On the iPhone itself</b>, try <i>Share / Save…</i> and then <i>Save 2 Items</i>. This route is experimental.</li>
+    </ul>
+    <p>The LIVE badge can show up before the video part has downloaded to your phone. If it doesn't move yet, give it a few minutes.</p>
+  </details>
+
+  <footer>Live Photo Maker · <a href="https://github.com/efella/LivePhoto">free and open source on GitHub</a> · not affiliated with Apple</footer>
+</main>
+
+<script src="livephoto.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var drop = $("drop"), input = $("file"), video = $("video"), still = $("still");
+  var current = null, result = null, objectUrl = null;
+
+  function fmt(t) { return t.toFixed(2) + " s"; }
+  function showError(msg) { var e = $("error"); e.textContent = msg; e.style.display = msg ? "block" : "none"; }
+
+  function reset() {
+    current = null; result = null;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    video.removeAttribute("src"); video.load();
+    $("stage").style.display = "none"; $("editor").style.display = "none"; $("result").style.display = "none";
+    $("info").innerHTML = ""; drop.style.display = ""; input.value = ""; showError("");
+  }
+
+  function load(file) {
+    reset();
+    if (!file) return;
+    current = file;
+    (file.slice(0, file.size).arrayBuffer ? file.arrayBuffer() : Promise.reject(new Error("Your browser is too old")))
+      .then(function (buf) {
+        var info = LivePhotoMaker.readVideoInfo(new Uint8Array(buf));
+        var chip = info.copyable
+          ? '<span class="chip good">Lossless: video copied bit-for-bit</span>'
+          : '<span class="chip warn">' + (info.codec || "?") + ' isn\'t supported here: use the desktop app</span>';
+        $("info").innerHTML = "<span></span>" + chip;
+        $("info").firstChild.textContent = file.name + " · " + (info.codec === "hvc1" ? "HEVC" : info.codec === "avc1" ? "H.264" : info.codec) + " · " + fmt(info.duration);
+        if (!info.copyable) return;
+        objectUrl = URL.createObjectURL(file);
+        video.src = objectUrl;
+        drop.style.display = "none"; $("stage").style.display = "block"; $("editor").style.display = "block";
+        video.onloadedmetadata = function () {
+          still.max = video.duration; still.step = 1 / 30; still.value = video.duration / 2;
+          seek();
+        };
+        video.onerror = function () {
+          showError("Your browser can't play this video, so it can't grab the key photo from it. Try Safari or Chrome, or use the desktop app.");
+        };
+      })
+      .catch(function (e) { showError(e.message); });
+  }
+
+  function seek() {
+    var t = parseFloat(still.value);
+    $("stillLabel").textContent = fmt(t);
+    if (video.readyState >= 1) video.currentTime = t;
+  }
+
+  function download(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+  }
+
+  drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+  drop.addEventListener("drop", function (e) {
+    e.preventDefault(); drop.classList.remove("over");
+    if (e.dataTransfer.files.length) load(e.dataTransfer.files[0]);
+  });
+  input.addEventListener("change", function () { load(input.files[0]); });
+  still.addEventListener("input", seek);
+  $("another").addEventListener("click", function () { reset(); input.click(); });
+
+  $("make").addEventListener("click", function () {
+    if (!current) return;
+    var btn = $("make");
+    btn.disabled = true; btn.textContent = "Making Live Photo…"; showError("");
+    LivePhotoMaker.makeLivePhoto(current, { stillTime: parseFloat(still.value) })
+      .then(function (r) {
+        result = r;
+        $("thumb").src = URL.createObjectURL(r.photo);
+        $("names").textContent = r.names.photo + " + " + r.names.video;
+        var files = [new File([r.photo], r.names.photo, { type: "image/jpeg" }),
+                     new File([r.video], r.names.video, { type: "video/quicktime" })];
+        $("share").style.display = navigator.canShare && navigator.canShare({ files: files }) ? "" : "none";
+        $("share").onclick = function () {
+          navigator.share({ files: files }).catch(function (e) { if (e.name !== "AbortError") showError(e.message); });
+        };
+        $("result").style.display = "block";
+        $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      })
+      .catch(function (e) { showError(e.message); })
+      .then(function () { btn.disabled = false; btn.textContent = "Make Live Photo"; });
+  });
+
+  $("both").addEventListener("click", function () {
+    if (!result) return;
+    download(result.photo, result.names.photo);
+    setTimeout(function () { download(result.video, result.names.video); }, 400);
+  });
+})();
+</script>
+</body>
+</html>

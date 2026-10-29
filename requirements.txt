@@ -1,0 +1,5 @@
+# ffmpeg binary (not needed if ffmpeg is already on your PATH)
+imageio-ffmpeg>=0.4.9
+# JPEG encoding, photo input and the app's previews
+pillow>=9.0
+# Optional, for dragging files onto the window:  pip install tkinterdnd2
