@@ -1,293 +1,233 @@
 # Live Photo Maker
 
-Turn any short video, or even a single photo, into a real **iPhone Live Photo**: a still
-picture that comes alive when you press on it.
+Convert videos and photos into iPhone Live Photos without re-encoding.
 
-- **No quality loss.** The video is copied bit-for-bit, never re-compressed, and the
-  still is the exact frame you choose.
-- **Free and open source.** No watermark, no account, no subscription.
-- **Desktop app** for Windows, macOS and Linux, plus a **command line** for batches.
-- **Website version.** A small JavaScript file that does everything in the browser, so
-  nothing gets uploaded. Put it on your own site in a few lines, or
-  [try it online](https://efella.github.io/LivePhoto/web/).
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
+[![Web demo](https://img.shields.io/badge/demo-online-brightgreen.svg)](https://efella.github.io/LivePhoto/web/)
 
-> Not affiliated with Apple. "Live Photos" and "iPhone" are trademarks of Apple Inc.
+Live Photo Maker produces the JPEG + MOV pair that iOS and macOS recognise as a single
+Live Photo. The video stream is remuxed as is, so it is never decoded or re-compressed.
+The key photo is the exact frame you choose.
 
----
+The project has two parts:
 
-## Contents
+- **Python:** a desktop app, a command-line tool and an importable module.
+- **JavaScript:** a library with no dependencies that does the same conversion entirely
+  in the browser. A [live demo](https://efella.github.io/LivePhoto/web/) is available.
 
-- [Quick start](#quick-start)
-- [Using the app](#using-the-app)
-- [Getting it onto your iPhone](#getting-it-onto-your-iphone)
-- [Command line](#command-line)
-- [Put it on your website](#put-it-on-your-website)
-- [What you need](#what-you-need)
-- [How it works](#how-it-works)
-- [Troubleshooting](#troubleshooting)
-- [Project layout](#project-layout)
-- [License](#license)
+## Features
 
----
+- **Lossless video.** H.264 and HEVC streams are copied bit-for-bit.
+- **Frame-accurate key photo.** Exported at full resolution as a 4:4:4, quality-100 JPEG.
+- **Optional trimming.** Trimmed clips are re-encoded with x264 at CRF 12.
+- **Photo input.** A photo becomes a 3-second motion clip. The original JPEG is kept,
+  unchanged, as the key photo.
+- **Desktop app** (Tkinter) with a filmstrip timeline, trim handles and drag and drop.
+- **Direct import** into Photos on macOS.
+- **Browser and Node.js library.** Files are processed on the client and never uploaded.
 
-## Quick start
+## Installation
 
-1. Download this repository: **Code → Download ZIP**, then unzip it. Or clone it:
-   `git clone https://github.com/efella/LivePhoto.git`
-2. Install **Python 3.8 or newer** from [python.org](https://www.python.org/downloads/).
-   - **Windows:** tick **"Add python.exe to PATH"** in the installer.
-   - **macOS:** use the python.org installer. The `python3` built into macOS is too old
-     to show windows (see [Troubleshooting](#troubleshooting)).
-3. Start the app:
+**Requirements**
 
-   | System  | Do this |
-   |---------|---------|
-   | Windows | Double-click **`Live Photo Maker.bat`**, or drag a video onto it. |
-   | macOS   | Double-click **`Live Photo Maker.command`**. If macOS blocks it, right-click it → **Open**. |
-   | Linux   | Run `pip install -r requirements.txt`, then `python3 livephoto.py`. |
+- Python 3.8 or later, with Tk 8.6 or later.
+- ffmpeg: bundled through `imageio-ffmpeg`, or picked up from `PATH` if installed.
+- Pillow.
+- Optional: `tkinterdnd2`, which enables drag and drop.
 
-The first start takes a minute. The launcher creates a private `.venv` folder next to
-the app and installs what it needs into it, without touching the rest of your system.
-After that it opens straight away.
-
-## Using the app
-
-1. **Open a video or photo.** Click **Open…**, click the big empty area, or drag a file
-   onto the window.
-2. **Pick the key photo.** This is the still image Photos shows before you press it.
-   - Click anywhere on the film strip, or drag the white marker.
-   - Use **← / →** to step one frame at a time.
-3. **Trim (optional).** Drag the blue edges of the strip. iPhone Live Photos are about 3
-   seconds long.
-   - Trimming means the video has to be re-encoded, which is very high quality but no
-     longer bit-for-bit. The green or yellow label under the preview always tells you
-     which mode you're in.
-4. Click **Make Live Photo.** You get two files next to the original:
-   `name_live.JPG` and `name_live.MOV`. Together they are one Live Photo.
-5. On a Mac, click **Add to Photos** to import it straight into the Photos app.
-
-**Photos as input.** If you open a photo instead of a video, the app makes a 3-second
-clip that gently zooms out to your full picture and back in. Your original JPEG is used
-untouched as the key photo. Use the **Zoom** slider to set how much it moves.
-
-## Getting it onto your iPhone
-
-> **It shows LIVE but doesn't move?** That's normal for the first few minutes. The badge
-> arrives before the video part has finished downloading to the phone. Until it has,
-> pressing does nothing and Live / Loop / Bounce are greyed out. Wait a little and try
-> again.
-
-## Command line
+**Install**
 
 ```bash
-# video: default key photo = middle of the clip
-python livephoto.py video.mp4 --cli
-
-# choose the key photo (seconds), trim, and pick the output folder
-python livephoto.py video.mp4 --cli --still 1.2 --start 0.5 --duration 3 -o out/
-
-# photo: make a zooming Live Photo (zoom in percent)
-python livephoto.py photo.jpg --cli --zoom 15
-
-# macOS: also import into the Photos app
-python livephoto.py video.mp4 --cli --add-to-photos
+git clone https://github.com/efella/LivePhoto.git
+cd LivePhoto
+pip install -r requirements.txt
+pip install tkinterdnd2   # optional
 ```
 
-Run `python livephoto.py --help` for all options. Existing files are never overwritten:
-a second run writes `name_live2.*`.
+**Launchers.** `Live Photo Maker.bat` (Windows) and `Live Photo Maker.command` (macOS)
+start the app by double-click. On first run they create a local `.venv` and install the
+requirements into it.
 
-You can also use it from your own Python code:
+**macOS.** Apple's bundled `/usr/bin/python3` ships Tk 8.5, which cannot open windows on
+current macOS. Use Python from [python.org](https://www.python.org/downloads/), or
+Homebrew (`brew install python python-tk`).
+
+## Usage
+
+### Desktop app
+
+```bash
+python livephoto.py [video-or-photo]
+```
+
+1. Open a video or photo.
+2. Choose the key photo on the filmstrip: click, drag, or use the arrow keys to step one
+   frame.
+3. Optionally, drag the trim handles to shorten the clip.
+
+The status label shows whether the video will be copied losslessly or re-encoded.
+
+Output is written next to the source file as `<name>_live.JPG` and `<name>_live.MOV`.
+Existing files are never overwritten.
+
+### Command line
+
+```bash
+python livephoto.py video.mp4 --cli                       # key photo at the midpoint
+python livephoto.py video.mp4 --cli --still 1.2 -o out/   # key photo at 1.2 s
+python livephoto.py video.mp4 --cli --start 0.5 --duration 3
+python livephoto.py photo.jpg --cli --zoom 15             # photo input, 15 % zoom
+python livephoto.py video.mp4 --cli --add-to-photos       # macOS: import into Photos
+```
+
+Run `python livephoto.py --help` for the full list of options.
+
+### Python API
 
 ```python
 import livephoto
+
 jpg, mov = livephoto.convert("video.mp4", out_dir="out", still_time=1.5)
 jpg, mov = livephoto.convert_photo("photo.jpg", out_dir="out", zoom=12)
+livephoto.add_to_photos(jpg, mov)  # macOS only
 ```
 
-## Put it on your website
+### Importing
 
-[`web/livephoto.js`](web/livephoto.js) is a single file with no dependencies. It builds
-the Live Photo **entirely in the visitor's browser**: no server, no upload, no ffmpeg.
-[`web/index.html`](web/index.html) is a complete demo page you can host as-is, for
-example on GitHub Pages, or copy from. It runs live at
-**[efella.github.io/LivePhoto/web](https://efella.github.io/LivePhoto/web/)**.
+The two files must be imported **together** to be paired. Importing both into Photos on
+macOS produces a Live Photo, and it syncs to iOS through iCloud Photos.
 
-Opening `web/index.html` straight from your disk works too.
+On iOS the motion becomes available once the paired video has downloaded to the device.
+Until then the Live Photo appears still.
 
-### Minimal example
+## Web library
+
+[`web/livephoto.js`](web/livephoto.js) is a single UMD script with no dependencies. It
+works with a `<script>` tag, with CommonJS, and in Node.js. It edits the MP4/MOV
+container directly, so it needs no ffmpeg or server.
+
+[`web/index.html`](web/index.html) is a complete reference page, deployed at
+[efella.github.io/LivePhoto/web](https://efella.github.io/LivePhoto/web/).
 
 ```html
 <input type="file" id="pick" accept="video/mp4,video/quicktime">
 <script src="livephoto.js"></script>
 <script>
   document.getElementById("pick").onchange = async (e) => {
-    const file = e.target.files[0];
-    const live = await LivePhotoMaker.makeLivePhoto(file, { stillTime: 1.5 });
-
-    // live.photo and live.video are Blobs; offer both for download
-    for (const [blob, name] of [[live.photo, live.names.photo], [live.video, live.names.video]]) {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-    }
+    const live = await LivePhotoMaker.makeLivePhoto(e.target.files[0], { stillTime: 1.5 });
+    // live.photo (image/jpeg) and live.video (video/quicktime) are Blobs;
+    // live.names holds suggested file names.
   };
 </script>
 ```
 
-### API
-
-| Function | What it does |
+| Function | Description |
 |---|---|
-| `makeLivePhoto(file, options)` | Promise → `{ photo, video, contentId, stillTime, names }`. `photo` is a JPEG Blob, `video` a QuickTime Blob. |
-| `buildLiveMov(bytes, { stillTime, contentId })` | The MOV half only, from a `Uint8Array`. Returns `{ parts }`; `new Blob(parts)` is the file. Also works in Node.js. |
-| `addLivePhotoExif(jpegBytes, contentId)` | Adds the Live Photo tag to any JPEG, returned as a `Uint8Array`. Also works in Node.js. |
-| `readVideoInfo(bytes)` | `{ duration, codec, copyable, ... }`, so you can check a file before converting. |
+| `makeLivePhoto(file, options)` | Resolves to `{ photo, video, contentId, stillTime, names }`. |
+| `buildLiveMov(bytes, { stillTime, contentId })` | Builds the MOV from a `Uint8Array`. Returns `{ parts }` for `new Blob(parts)`. Works in Node.js. |
+| `addLivePhotoExif(jpegBytes, contentId)` | Adds the Live Photo metadata to a JPEG. Works in Node.js. |
+| `readVideoInfo(bytes)` | Returns `{ duration, codec, copyable, … }`. |
 
-`makeLivePhoto` options:
-
-| Option | Meaning |
-|---|---|
-| `stillTime` | Key photo time in seconds. Default: the middle of the video. |
-| `photo` | Your own JPEG Blob to use as the key photo instead of a video frame. |
-| `jpegQuality` | 0 to 1, used for the grabbed frame. Default: 1. |
-
-**Limits of the web version:**
-- It takes MP4 / MOV files with **H.264 or HEVC** video, which covers phones, most cameras
-  and editors.
-- It can't trim or re-encode. Use the desktop app for other formats or for trimming.
-- The video is copied bit-for-bit. The key photo is captured by the browser, which is
-  very high quality but slightly below the desktop app (about 39 dB vs 57 dB PSNR in our
-  tests). Pass your own `photo` if that matters to you.
-- The browser has to be able to play the video to grab the frame. HEVC doesn't play in
-  every browser.
-
-Node.js works too, with the same file:
-`const LivePhotoMaker = require("./web/livephoto.js")`, then `buildLiveMov` and
-`addLivePhotoExif`.
-
-## What you need
-
-| | Required | Why |
+| Option | Default | Description |
 |---|---|---|
-| **Python 3.8+** with Tk 8.6 or newer | yes | The app is plain Python. Tk draws the window. |
-| **ffmpeg** | yes, installed for you | Reads and copies the video. Comes from the `imageio-ffmpeg` package, or uses `ffmpeg` if it's already on your PATH. |
-| **Pillow** | yes, installed for you | Saves the key photo, reads photos, draws the previews. |
-| **tkinterdnd2** | optional | Lets you drag files onto the window. The launchers install it if they can. |
+| `stillTime` | midpoint | Key photo time, in seconds. |
+| `photo` | – | A JPEG `Blob` to use as the key photo instead of a video frame. |
+| `jpegQuality` | `1` | Quality used when encoding the captured frame. |
 
-The launchers install everything except Python. To set it up by hand:
+Limitations of the web version:
 
-```bash
-pip install -r requirements.txt
-pip install tkinterdnd2   # optional
-```
-
-The website version needs nothing at all.
+- Input must be MP4 or MOV with H.264 (`avc1`) or HEVC (`hvc1`). Trimming and
+  transcoding require the Python version.
+- The key photo is captured through a `<canvas>`. It is slightly lower in fidelity than
+  the Python version: about 39 dB PSNR, against about 57 dB.
+- Capturing the frame requires the browser to decode the video, and HEVC support varies
+  between browsers.
 
 ## How it works
 
-An iPhone Live Photo is a **JPEG (or HEIC) photo** plus a **QuickTime .MOV video**. iOS
-links the two through a shared random ID, the *content identifier*, and a marker that
-says which moment of the video the photo shows:
+A Live Photo is a still image and a QuickTime movie linked by a shared UUID, the
+*content identifier*:
 
 ```
- name_live.JPG                          name_live.MOV
+ <name>_live.JPG                        <name>_live.MOV
 ┌───────────────────────────┐         ┌─────────────────────────────────────────────┐
-│ EXIF                      │         │ video + audio  (copied bit-for-bit)          │
+│ EXIF                      │         │ video and audio tracks (remuxed, unchanged)  │
 │  └ Apple MakerNote        │         │ moov/meta                                    │
-│     └ tag 17 = 8B36…FA97 ◄┼── same ─┼─► content.identifier = 8B36…FA97           │
-│ the key photo             │   ID    │ timed metadata track                         │
-└───────────────────────────┘         │  └ still-image-time  @ 1.47 s  ◄ key photo   │
+│     └ tag 0x11 = <UUID>  ◄┼─────────┼─► com.apple.quicktime.content.identifier    │
+│ JPEG image data           │         │ timed metadata track                         │
+└───────────────────────────┘         │  └ still-image-time at the key photo time    │
                                       └─────────────────────────────────────────────┘
 ```
 
-**The photo.** Live Photo Maker writes a minimal EXIF block containing an **Apple
-MakerNote** (`"Apple iOS"` header, big-endian). Tag `0x11` holds the content identifier.
-The MakerNote is padded to 1568 bytes, the size an iPhone writes, because some versions
-of Apple's ImageIO ignore MakerNotes smaller than about 1 KB.
+**JPEG.** A big-endian EXIF block containing an Apple MakerNote (`Apple iOS` header).
+- Tag `0x11` holds the content identifier.
+- The MakerNote is padded to 1568 bytes, the size written by iPhones. Some ImageIO
+  versions ignore MakerNotes smaller than about 1 KB.
 
-**The video:**
+**MOV.** ffmpeg remuxes the source with `-c:v copy` and writes the content identifier
+as an `mdta` metadata key. `add_still_image_time()` then edits the box structure:
 
-1. ffmpeg **remuxes** the input into a QuickTime `.MOV` with `-c:v copy`: the
-   compressed video is copied, not decoded, so nothing is lost. The ID goes in as the
-   `com.apple.quicktime.content.identifier` metadata key.
-2. The program then edits the MOV's boxes directly (`add_still_image_time` in
-   [`livephoto.py`](livephoto.py)):
-   - It moves the metadata from ISO-style `moov/udta/meta` to QuickTime-style
-     `moov/meta`, where iPhones keep it.
-   - It adds a **timed metadata track**: handler `meta`, sample entry `mebx`, key
-     `com.apple.quicktime.still-image-time`, type int8.
-     - The track has one sample with the value `-1`, positioned at the key photo time
-       with an empty edit.
-     - A `tref/cdsc` reference links it to the video track.
-   - It marks every track as enabled, in movie, in preview and in poster, as iPhone
-     files do.
+- It moves the metadata from ISO-style `moov/udta/meta` to QuickTime-style `moov/meta`.
+- It appends a timed metadata track:
+  - handler `meta`, sample entry `mebx`, key `com.apple.quicktime.still-image-time`
+    (int8);
+  - a single sample with the value `-1`, positioned at the key photo time by an empty
+    edit;
+  - a `tref/cdsc` reference to the video track.
+- It sets the enabled, in-movie, in-preview and in-poster flags on every track, as
+  iPhone files do.
 
-The result was checked against real iPhone Live Photos and with Apple's own frameworks:
-ImageIO, AVFoundation, and PhotoKit's `PHLivePhoto`, which returns nothing for a
-mismatched pair. Imported into Photos on a Mac, it becomes one Live Photo that plays and
-syncs to the iPhone.
+**Photo input.** A cosine zoom curve is rendered to H.264 with the unzoomed frame
+exactly at the midpoint, which is the still-image-time.
 
-**From a photo:** ffmpeg renders a 3-second H.264 clip from the picture, using a smooth
-cosine zoom with the full photo exactly at the middle frame. The original JPEG becomes
-the key photo unchanged. If the photo has to be rotated or converted, it is saved as a
-quality-100 JPEG with no chroma subsampling.
+**Validation.** Output is checked with Apple's ImageIO, AVFoundation and
+`PHLivePhoto`, and compared against Live Photos captured on an iPhone.
 
-**In the browser:** [`web/livephoto.js`](web/livephoto.js) does the same box editing in
-JavaScript on the original MP4/MOV, so no ffmpeg is needed.
-- It rewrites the chunk offsets, because the `moov` box moves to the end of the file.
-- It grabs the key photo with a `<video>` element and a canvas.
+## Known limitations
+
+- Uploading through icloud.com, or through the iCloud for Windows upload folder, imports
+  the two files as separate items. No Windows-only import route has been verified yet.
+- When input needs transcoding (trimming, or codecs other than H.264/HEVC), output is
+  visually lossless rather than bit-exact.
 
 ## Troubleshooting
 
-**The LIVE badge shows on my iPhone but the photo doesn't move.**
-The video part hasn't downloaded to the phone yet. Wait a few minutes.
-
-**It arrived as a separate photo and video.**
-The two files took a route that doesn't know about Live Photos, such as icloud.com or the
-iCloud for Windows folder. Import both files together into the Photos app on a Mac
-instead, and delete the stray copies.
-
-**macOS: the window never appears, or the launcher says it needs Tk 8.6.**
-The `python3` that comes with macOS (`/usr/bin/python3`) ships Tk 8.5, which can't open
-windows on current macOS. Install Python from [python.org](https://www.python.org/downloads/)
-and delete the `.venv` folder so the launcher sets itself up again. With Homebrew, run
-`brew install python python-tk`.
-
-**Windows: "Python 3 was not found".**
-Install Python from python.org and tick **"Add python.exe to PATH"**. The Microsoft
-Store shortcut that Windows offers instead doesn't count.
-
-**The label says "Re-encode".**
-Either you trimmed the clip, or the video codec isn't one iPhones play (VP9, AV1, …).
-The app then encodes H.264 at CRF 12, which is visually lossless. Keep the full length of
-an H.264 / HEVC video if you want the bit-for-bit copy.
-
-**Drag and drop doesn't work.**
-Run `pip install tkinterdnd2`, or use **Open…** instead.
-
-**Something else.**
-Click **Show details** at the bottom of the app to see the full log, and include it when
-you [open an issue](https://github.com/efella/LivePhoto/issues).
-
-## Project layout
-
-| File | What it is |
+| Symptom | Cause / fix |
 |---|---|
-| `livephoto.py` | The engine and the command line: ffmpeg handling, EXIF, MOV box editing |
-| `livephoto_gui.py` | The desktop app (tkinter) |
-| `Live Photo Maker.bat` / `.command` | Double-click launchers for Windows / macOS |
-| `requirements.txt` | Python packages |
-| `web/livephoto.js` | The browser and Node.js library |
-| `web/index.html` | The demo web page |
+| Live badge appears on iOS but the photo does not move | The paired video has not downloaded yet. Wait for iCloud to finish syncing. |
+| Photo and video appear as separate items | The files were imported separately. Import both at once. |
+| macOS: the window does not open, or the launcher reports Tk 8.5 | Install Python from python.org, then delete `.venv` so the launcher rebuilds it. |
+| Windows: "Python 3 was not found" | Install Python from python.org with **Add python.exe to PATH** enabled. |
+| Drag and drop is unavailable | `pip install tkinterdnd2` |
 
-## Credits
+## Project structure
 
-- [ExifTool](https://exiftool.org/TagNames/Apple.html) for its documentation of Apple's
-  MakerNote and QuickTime tags.
-- [MotionPhotoConverter](https://github.com/lutao043/MotionPhotoConverter)'s technical
-  notes, for the MakerNote size finding.
+| Path | Description |
+|---|---|
+| `livephoto.py` | Conversion engine, CLI and Python API |
+| `livephoto_gui.py` | Desktop app (Tkinter) |
+| `Live Photo Maker.bat`, `Live Photo Maker.command` | Launchers for Windows and macOS |
+| `web/livephoto.js` | Browser and Node.js library |
+| `web/index.html` | Reference web page |
+
+## Contributing
+
+Issues and pull requests are welcome. When reporting a conversion problem, include the
+log from **Show details** in the desktop app, or the CLI output, along with the source
+file's codec and container.
+
+## Acknowledgements
+
+- [ExifTool](https://exiftool.org/TagNames/Apple.html): documentation of Apple MakerNote
+  and QuickTime tags.
+- [MotionPhotoConverter](https://github.com/lutao043/MotionPhotoConverter): notes on
+  MakerNote size requirements.
 
 ## License
 
-[MIT](LICENSE). Use it, change it, ship it.
+Released under the [MIT License](LICENSE).
+
+Live Photos and iPhone are trademarks of Apple Inc. This project is not affiliated with
+Apple.
